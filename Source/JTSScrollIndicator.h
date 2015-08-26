@@ -42,6 +42,11 @@
  */
 - (void)reset;
 
+/**
+ *  Math method. It will be used when calculate the indicator's frame.
+ */
++ (CGRect)targetRectForScrollView:(UIScrollView *)scrollView;
+
 @end
 
 ///-----------------------------------------------------------
