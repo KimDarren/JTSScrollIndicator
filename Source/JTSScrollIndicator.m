@@ -7,12 +7,7 @@
 //
 
 #import "JTSScrollIndicator.h"
-
-static CGFloat JTSScrollIndicator_IndicatorWidth = 2.5f;
-static CGFloat JTSScrollIndicator_MinIndicatorHeightWhenCompressed = 8.0f;
-static CGFloat JTSScrollIndicator_MinIndicatorHeightWhenScrolling = 37.0f;
-static CGFloat JTSScrollIndicator_IndicatorRightMargin = 2.5f;
-static UIEdgeInsets JTSScrollIndicator_InherentInset;
+#import "JTSScrollIndicatorConfig.h"
 
 @interface JTSScrollIndicator () <UIScrollViewDelegate>
 
@@ -32,11 +27,13 @@ static UIEdgeInsets JTSScrollIndicator_InherentInset;
     if (self) {
         _scrollView = scrollView;
         _scrollView.showsVerticalScrollIndicator = NO;  // The default scroll indicator in the scroll view must to be hide to show JTSScrollIndicator.
-        self.layer.cornerRadius = JTSScrollIndicator_IndicatorWidth * 0.75;
+        
+        JTSScrollIndicatorConfig *config = [JTSScrollIndicatorConfig sharedConfig];
+        
+        self.layer.cornerRadius = config.width * 0.75;
         self.clipsToBounds = YES;
         self.alpha = 0;
         _shouldHide = YES;
-        JTSScrollIndicator_InherentInset = UIEdgeInsetsMake(2.5, 0, 2.5, 0);
         [scrollView addSubview:self];
         [self reset];
     }
@@ -71,6 +68,8 @@ static UIEdgeInsets JTSScrollIndicator_InherentInset;
 }
 
 + (CGRect)underlyingIndicatorRectForScrollView:(UIScrollView *)scrollView {
+    JTSScrollIndicatorConfig *config = [JTSScrollIndicatorConfig sharedConfig];
+    
     CGRect underlyingRect = CGRectZero;
     CGFloat contentHeight = scrollView.contentSize.height;
     UIEdgeInsets indicatorInsets = scrollView.scrollIndicatorInsets;
@@ -78,30 +77,32 @@ static UIEdgeInsets JTSScrollIndicator_InherentInset;
     UIEdgeInsets contentInset = scrollView.contentInset;
     CGPoint contentOffset = scrollView.contentOffset;
     CGFloat contentHeightWithInsets = contentHeight + contentInset.top + contentInset.bottom;
-    CGFloat frameHeightWithoutScrollIndicatorInsets = (frameHeight - indicatorInsets.top - indicatorInsets.bottom - JTSScrollIndicator_InherentInset.top);
+    CGFloat frameHeightWithoutScrollIndicatorInsets = (frameHeight - indicatorInsets.top - indicatorInsets.bottom - config.inherentInsets.top);
     
-    underlyingRect.size.width = JTSScrollIndicator_IndicatorWidth;
-    underlyingRect.origin.x = scrollView.frame.size.width - JTSScrollIndicator_IndicatorWidth - JTSScrollIndicator_IndicatorRightMargin;
+    underlyingRect.size.width = config.width;
+    underlyingRect.origin.x = scrollView.frame.size.width - config.width - config.rightMargin;
     
     CGFloat ratio = (contentHeightWithInsets != 0) ? frameHeightWithoutScrollIndicatorInsets / contentHeightWithInsets : 1.0f;
     
     underlyingRect.size.height = frameHeight * ratio;
     underlyingRect.origin.y = contentOffset.y + ((contentOffset.y+contentInset.top) * ratio) + indicatorInsets.top;
     
-    if (underlyingRect.size.height < JTSScrollIndicator_MinIndicatorHeightWhenScrolling) {
+    if (underlyingRect.size.height < config.minHeightWhenScrolling) {
         CGFloat contentHeightWithoutLastFrame = contentHeightWithInsets - frameHeight;
         CGFloat percentageScrolled = (contentOffset.y+contentInset.top) / contentHeightWithoutLastFrame;
-        underlyingRect.origin.y -= (JTSScrollIndicator_MinIndicatorHeightWhenScrolling - underlyingRect.size.height) * percentageScrolled;
-        underlyingRect.size.height = JTSScrollIndicator_MinIndicatorHeightWhenScrolling;
+        underlyingRect.origin.y -= (config.minHeightWhenScrolling - underlyingRect.size.height) * percentageScrolled;
+        underlyingRect.size.height = config.minHeightWhenScrolling;
     }
     
-    underlyingRect.size.height -= JTSScrollIndicator_InherentInset.top;
-    underlyingRect.origin.y += JTSScrollIndicator_InherentInset.top;
+    underlyingRect.size.height -= config.inherentInsets.top;
+    underlyingRect.origin.y += config.inherentInsets.top;
     
     return underlyingRect;
 }
 
 + (CGRect)adjustUnderlyingRect:(CGRect)underlyingRect forScrollView:(UIScrollView *)scrollView {
+    JTSScrollIndicatorConfig *config = [JTSScrollIndicatorConfig sharedConfig];
+    
     CGRect adjustedRect = underlyingRect;
     
     CGFloat contentHeight = scrollView.contentSize.height;
@@ -112,19 +113,19 @@ static UIEdgeInsets JTSScrollIndicator_InherentInset;
     CGFloat contentHeightWithInsets = contentHeight + contentInset.top + contentInset.bottom;
     
     if (contentOffset.y < 0-contentInset.top
-     || adjustedRect.origin.y < (0-contentInset.top + indicatorInset.top) + JTSScrollIndicator_InherentInset.top) {
+     || adjustedRect.origin.y < (0-contentInset.top + indicatorInset.top) + config.inherentInsets.top) {
         CGFloat heightAdjustment = fabsf(contentInset.top - fabsf(contentOffset.y));
         adjustedRect.size.height -= heightAdjustment;
-        adjustedRect.size.height = MAX(adjustedRect.size.height, JTSScrollIndicator_MinIndicatorHeightWhenCompressed);
-        adjustedRect.origin.y = contentOffset.y + indicatorInset.top + JTSScrollIndicator_InherentInset.top;
+        adjustedRect.size.height = MAX(adjustedRect.size.height, config.minHeightWhenCompressed);
+        adjustedRect.origin.y = contentOffset.y + indicatorInset.top + config.inherentInsets.top;
     }
     else if (contentOffset.y + frameHeight > contentHeight + contentInset.bottom
-        || adjustedRect.origin.y + adjustedRect.size.height > contentOffset.y + frameHeight - indicatorInset.bottom - JTSScrollIndicator_InherentInset.bottom) {
+        || adjustedRect.origin.y + adjustedRect.size.height > contentOffset.y + frameHeight - indicatorInset.bottom - config.inherentInsets.bottom) {
         adjustedRect.origin.y = contentHeightWithInsets - underlyingRect.size.height - indicatorInset.bottom;
         CGFloat heightAdjustment = (contentOffset.y + frameHeight) - (contentHeight + contentInset.bottom);
         adjustedRect.size.height -= heightAdjustment;
-        adjustedRect.size.height = MAX(adjustedRect.size.height, JTSScrollIndicator_MinIndicatorHeightWhenCompressed);
-        adjustedRect.origin.y = contentOffset.y + frameHeight - adjustedRect.size.height - indicatorInset.bottom - JTSScrollIndicator_InherentInset.bottom;
+        adjustedRect.size.height = MAX(adjustedRect.size.height, config.minHeightWhenCompressed);
+        adjustedRect.origin.y = contentOffset.y + frameHeight - adjustedRect.size.height - indicatorInset.bottom - config.inherentInsets.bottom;
     }
     
     adjustedRect.origin.x = underlyingRect.origin.x + indicatorInset.left;
