@@ -31,6 +31,7 @@ static UIEdgeInsets JTSScrollIndicator_InherentInset;
     self = [super initWithFrame:startingFrame];
     if (self) {
         _scrollView = scrollView;
+        _scrollView.showsVerticalScrollIndicator = NO;  // The default scroll indicator in the scroll view must to be hide to show JTSScrollIndicator.
         self.layer.cornerRadius = JTSScrollIndicator_IndicatorWidth * 0.75;
         self.clipsToBounds = YES;
         self.alpha = 0;
